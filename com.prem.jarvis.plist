@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.prem.jarvis</string>
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Replace with actual path to your venv python -->
+        <string>/Users/prem/Desktop/jarvisassistant/venv/bin/python</string>
+        <string>/Users/prem/Desktop/jarvisassistant/main.py</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/tmp/com.prem.jarvis.err</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/com.prem.jarvis.out</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>

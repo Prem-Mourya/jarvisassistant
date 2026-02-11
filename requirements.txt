@@ -1,0 +1,6 @@
+pvporcupine
+vosk
+sounddevice
+psutil
+
+requests

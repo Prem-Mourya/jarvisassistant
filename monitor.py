@@ -92,7 +92,13 @@ class SystemMonitor:
                 time.sleep(60)
 
     def _check_battery(self):
-        battery = psutil.sensors_battery()
+        try:
+            battery = psutil.sensors_battery()
+        except Exception as e:
+            # Android/Termux often denies access to /sys/class/power_supply
+            # We could try termux-battery-status here, but for now just silence it.
+            return
+
         if not battery:
             return
 

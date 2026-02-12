@@ -1,9 +1,6 @@
-try:
-    import pvporcupine
-except Exception as e:
-    # Catching broad Exception because pvporcupine raises NotImplementedError or others during init on some ARM chips
-    pvporcupine = None
-    print(f"Warning: pvporcupine failed to load ({e}). Wake word detection will be disabled.")
+# import pvporcupine - Moved to init_porcupine to avoid crash on Android
+pvporcupine = None
+
 import struct
 import queue
 import sounddevice as sd
@@ -48,6 +45,15 @@ class JarvisApp:
 
     def init_porcupine(self):
         """Initialize Porcupine if available."""
+        global pvporcupine
+        try:
+            import pvporcupine
+        except Exception as e:
+            print(f"Porcupine library failed to load: {e}")
+            pvporcupine = None
+            self.porcupine = None
+            return
+
         if not pvporcupine:
             return
             

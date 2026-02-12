@@ -1,6 +1,9 @@
 import logging
 import time
 import utils
+import os
+import json
+import vosk
 
 # Vosk STT + macOS TTS
 # You must download a model from https://alphacephei.com/vosk/models

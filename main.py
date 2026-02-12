@@ -1,8 +1,9 @@
 try:
     import pvporcupine
-except ImportError:
+except Exception as e:
+    # Catching broad Exception because pvporcupine raises NotImplementedError or others during init on some ARM chips
     pvporcupine = None
-    print("Warning: pvporcupine not found. Wake word detection will be disabled.")
+    print(f"Warning: pvporcupine failed to load ({e}). Wake word detection will be disabled.")
 import struct
 import queue
 import sounddevice as sd

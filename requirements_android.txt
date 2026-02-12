@@ -1,0 +1,9 @@
+vosk
+sounddevice
+psutil
+requests
+# ddgs might have issues, but let's keep it.
+# wikipedia is pure python
+wikipedia
+# Removed pvporcupine as it causes install issues on Termux commonly.
+# Removed pyobjc as it is Mac specific.

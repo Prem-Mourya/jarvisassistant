@@ -1,4 +1,8 @@
-import pvporcupine
+try:
+    import pvporcupine
+except ImportError:
+    pvporcupine = None
+    print("Warning: pvporcupine not found. Wake word detection will be disabled.")
 import struct
 import queue
 import sounddevice as sd
@@ -40,6 +44,20 @@ class JarvisApp:
         self.running = False  # Flag to control the main loop
         # Force garbage collection after initialization
         gc.collect()
+
+    def init_porcupine(self):
+        """Initialize Porcupine if available."""
+        if not pvporcupine:
+            return
+            
+        try:
+            self.porcupine = pvporcupine.create(
+                access_key=PORCUPINE_ACCESS_KEY,
+                keywords=["jarvis"]
+            )
+        except Exception as e:
+            print(f"Failed to initialize Porcupine: {e}")
+            self.porcupine = None
 
     def stop(self):
         """Stop the application loop."""
@@ -99,30 +117,35 @@ class JarvisApp:
                         
                         if current_state == STATE_WAKE:
                             # Process for Wake Word
-                            # Porcupine requires list of shorts
-                            pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm_bytes)
-                            keyword_index = self.porcupine.process(pcm)
-                            
-                            if keyword_index >= 0:
-                                print("Wake word detected!")
-                                logging.info("Wake word detected")
-                                # Play notification sound to indicate listening
-                                if utils.PLATFORM == "mac":
-                                    utils.play_sound("/System/Library/Sounds/Tink.aiff")
-                                else:
-                                    # On Android/Linux, we might not have this file.
-                                    # Could add a beep or just skip if file missing.
-                                    pass
+                            if self.porcupine:
+                                # Porcupine requires list of shorts
+                                pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm_bytes)
+                                keyword_index = self.porcupine.process(pcm)
                                 
-                                # Clear queue to avoid processing own voice
-                                with audio_queue.mutex:
-                                    audio_queue.queue.clear()
+                                if keyword_index >= 0:
+                                    print("Wake word detected!")
+                                    logging.info("Wake word detected")
+                                    # Play notification sound
+                                    if utils.PLATFORM == "mac":
+                                        utils.play_sound("/System/Library/Sounds/Tink.aiff")
                                     
+                                    # Clear queue
+                                    with audio_queue.mutex:
+                                        audio_queue.queue.clear()
+                                        
+                                    current_state = STATE_LISTEN
+                                    in_conversation = True
+                                    listen_start_time = time.time()
+                                    last_speech_time = time.time()
+                                    print("Listening for command...")
+                            else:
+                                # No wake word engine, default to always listening / conversation mode
+                                # But we need to throttle or it might be chaotic.
+                                # Let's just switch to LISTEN state immediately.
                                 current_state = STATE_LISTEN
                                 in_conversation = True
-                                listen_start_time = time.time()
                                 last_speech_time = time.time()
-                                print("Listening for command...")
+                                print("No wake word engine. Listening for command...")
 
                         elif current_state == STATE_LISTEN:
                             # Determine timeout based on conversation mode
@@ -499,10 +522,8 @@ class JarvisApp:
 if __name__ == '__main__':
     app = JarvisApp()
     # Initialize porcupine and monitor before loop
-    app.porcupine = pvporcupine.create(
-        access_key=PORCUPINE_ACCESS_KEY,
-        keywords=["jarvis"]
-    )
+    app.init_porcupine()
+
     app.monitor.start()
     print("Jarvis is online. Say 'Jarvis' to wake me up.")
     app.voice.speak("Jarvis is online. sir!")

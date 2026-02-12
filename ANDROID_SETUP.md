@@ -4,75 +4,74 @@ This guide explains how to set up Jarvis on your Android tablet using Termux.
 
 ## Prerequisites
 
-1.  **F-Droid**: It is recommended to install Termux from F-Droid, not the Play Store (Play Store version is outdated).
+1.  **F-Droid**: It is recommended to install Termux from F-Droid.
 2.  **Termux**: Terminal emulator.
-3.  **Termux:API**: App add-on for hardware access (TTS, Audio, etc.).
+3.  **Termux:API**: App add-on.
 
-## Installation Steps
+## Installation Steps (Updated for Dependency Fixes)
 
-### 1. Install Apps
-1.  Download **F-Droid** from [f-droid.org](https://f-droid.org/).
-2.  Install **Termux** from F-Droid.
-3.  Install **Termux:API** from F-Droid.
-
-### 2. Configure Termux
-Open Termux and run the following commands to update and install packages:
+### 1. Install System Packages
+Open Termux and run:
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install python git termux-api build-essential cmake -y
+# Install build tools and python
+pkg install python git termux-api build-essential cmake libffi openssl -y
 ```
 
-### 3. Grant Permissions
-You need to grant Termux access to storage and microphone.
+### 2. Grant Permissions
 ```bash
 termux-setup-storage
 termux-microphone-record
 ```
-(Accept the permission prompts)
+**IMPORTANT**: Open the **Termux:API** app once to initialize it.
 
-**IMPORTANT**: Open the **Termux:API** app once to ensure it's initialized, and ensure Termux has "run in background" and "display over other apps" permissions if possible for best performance.
-
-### 4. Clone/Copy Jarvis
-If you haven't already, clone the repo or copy your files to Termux.
-
+### 3. Copy Jarvis Config
+Copy the `jarvisassistant` folder to your tablet (e.g., via USB or `git clone`).
 ```bash
-cd ~
-# If cloning from git
-# git clone <your-repo-url> jarvisassistant
-# cd jarvisassistant
+cd ~/jarvisassistant
 ```
 
-### 5. Install Python Dependencies
-Mac-specific libraries (`pyobjc`, `sounddevice` with PortAudio) might be tricky on Android. We use `vosk` which is supported.
+### 4. Install Python Dependencies (Android Specific)
+We use a special requirements file for Android to avoid Mac-only packages and broken wake-word engines.
 
-**Note**: `sounddevice` / `pyaudio` often requires `portaudio`.
 ```bash
-pkg install portaudio
-pip install -r requirements.txt
-```
-If `sounddevice` fails, you might need: `pip install sounddevice` explicitly after installing portaudio.
+# Update pip first
+pip install --upgrade pip
 
-### 6. Download Vosk Model
-Jarvis needs a proper Vosk model to run offline.
+# Install dependencies (ignoring pvporcupine/vosk for a moment to ensure base works)
+pip install -r requirements_android.txt
+```
+
+**Troubleshooting Vosk**:
+If `pip install vosk` fails with "No matching distribution":
+1.  Try: `pip install vosk==0.3.45` (sometimes newer versions miss wheels).
+2.  Or: `pip install https://github.com/alphacephei/vosk-api/releases/download/v0.3.50/vosk-0.3.50-py3-none-any.whl` (if available).
+3.  Usually `pip install vosk` works if `libffi` and `build-essential` are installed and `pip` is updated.
+4. Try installing `wheel` first: `pip install wheel`.
+
+### 5. Download HIGH ACCURATE Vosk Model
+Since your tablet has good RAM, use the large model for best accuracy.
+
 ```bash
 mkdir -p models
 cd models
-wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
-unzip vosk-model-small-en-us-0.15.zip
-mv vosk-model-small-en-us-0.15 model
-rm vosk-model-small-en-us-0.15.zip
+
+# Downloading the BIG model (approx 1.8GB) - accurate!
+wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip
+unzip vosk-model-en-us-0.22.zip
+mv vosk-model-en-us-0.22 model
+rm vosk-model-en-us-0.22.zip
+
 cd ..
 ```
-*Note: You can use a larger model for better accuracy if your tablet has space/RAM.*
 
-### 7. Run Jarvis
+### 6. Run Jarvis
 ```bash
 python main.py
 ```
+*Note: Without `pvporcupine`, Jarvis will start in "Always Listening" mode or immediately try to process speech. Watch the output.*
 
-## Known Limitations on Android
-- **Porcupine (Wake Word)**: `pvporcupine` Python package might not allow the Mac access key or might need a different platform wheel. If `pvporcupine` fails, we might need a pure Vosk wake word approach or a different library.
-    - *Fix*: You might need to `pip install pvporcupine` specifically for Linux/ARM if available, or use `vosk` for wake word detection too.
-- **Microphone**: Ensure no other app is using the mic.
-- **Background**: Android kills background processes. Use "Acquire Wakelock" from Termux notification to keep it running.
+## Tips
+- **Wake Lock**: Notification -> Acquire Wakelock.
+- **TTS**: Ensure Google Text-to-Speech engine is installed on Android for `termux-tts-speak` to sound good.

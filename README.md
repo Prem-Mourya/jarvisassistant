@@ -23,7 +23,7 @@ A fully offline, voice-activated AI assistant for macOS.
 
 Navigate to the project folder and create a virtual environment:
 ```bash
-cd /Users/prem/Desktop/jarvisassistant
+cd /Users/prem/jarvisassistant
 python3 -m venv venv
 source venv/bin/activate
 ```

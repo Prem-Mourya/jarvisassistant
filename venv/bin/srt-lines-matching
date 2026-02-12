@@ -1,4 +1,4 @@
-#!/Users/prem/Desktop/jarvisassistant/venv/bin/python3
+#!/Users/prem/jarvisassistant/venv/bin/python3
 
 """Filter subtitles that match or don't match a particular pattern."""
 

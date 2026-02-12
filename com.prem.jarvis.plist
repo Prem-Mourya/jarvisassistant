@@ -14,6 +14,8 @@
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>WorkingDirectory</key>
+    <string>/Users/prem/jarvisassistant</string>
     <key>StandardErrorPath</key>
     <string>/tmp/com.prem.jarvis.err</string>
     <key>StandardOutPath</key>

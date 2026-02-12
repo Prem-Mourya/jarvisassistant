@@ -1,11 +1,8 @@
-import os
-import queue
-import sounddevice as sd
-import vosk
-import json
+import logging
 import time
+import utils
 
-# --- Configuration ---
+# Vosk STT + macOS TTS
 # You must download a model from https://alphacephei.com/vosk/models
 # and extract it to the 'models' folder.
 MODEL_PATH = "models/model" 
@@ -13,8 +10,10 @@ SAMPLE_RATE = 16000
 
 class VoiceEngine:
     def __init__(self):
-        self.q = queue.Queue()
         self.rec = None
+        self.model = None
+        self.is_speaking = False  # Track if currently speaking
+        self.current_speech_process = None  # Track the speech subprocess
         self.setup_vosk()
 
     def setup_vosk(self):
@@ -30,58 +29,58 @@ class VoiceEngine:
             print(f"Failed to load Vosk model: {e}")
 
     def speak(self, text):
-        """
-        Speak text using macOS native 'say' command (High Quality, Offline).
-        This blocks until speaking is done to avoid listening to itself.
-        """
+        """Text-to-speech using platform-specific command."""
         if not text:
             return
+        
         print(f"Jarvis: {text}")
-        # Escape quotes to prevent shell injection/errors
-        safe_text = text.replace('"', '\\"')
-        os.system(f'say "{safe_text}"')
+        try:
+            self.is_speaking = True
+            # Use utils.speak for platform-agnostic TTS
+            self.current_speech_process = utils.speak(text)
+            
+            if self.current_speech_process:
+                self.current_speech_process.wait()
+            
+            # Give some time for audio to clear before listening again
+            time.sleep(0.3)
+        except Exception as e:
+            logging.error(f"Error speaking: {e}")
+        finally:
+            self.is_speaking = False
+            self.current_speech_process = None
+    
+    def stop_speaking(self):
+        """Interrupt current speech."""
+        if self.current_speech_process and self.current_speech_process.poll() is None:
+            try:
+                self.current_speech_process.terminate()
+                try:
+                    self.current_speech_process.wait(timeout=0.5)
+                except subprocess.TimeoutExpired:
+                    self.current_speech_process.kill()
+                    self.current_speech_process.wait()
+            except Exception as e:
+                logging.error(f"Error stopping speech: {e}")
+            finally:
+                self.current_speech_process = None
+                self.is_speaking = False
 
-    def _audio_callback(self, indata, frames, time, status):
-        """Callback for sounddevice input stream."""
-        if status:
-            print(status, flush=True)
-        self.q.put(bytes(indata))
-
-    def listen(self, timeout=5):
+    def process_audio(self, data):
         """
-        Listen for a command for a specific duration or until silence.
-        Returns the recognized text.
+        Process a chunk of audio data.
+        Returns (final_text, partial_text)
+        - final_text: The detected command if utterance is complete.
+        - partial_text: The current incomplete sentence (e.g. "open...").
         """
         if not self.rec:
-            return ""
-
-        print("Listening...")
-        # Play a subtle listening sound (optional, skipping for now)
-        
-        start_time = time.time()
-        result_text = ""
-
-        try:
-            with sd.RawInputStream(samplerate=SAMPLE_RATE, blocksize=8000, device=None,
-                                   dtype='int16', channels=1, callback=self._audio_callback):
-                
-                while True:
-                    # Check timeout
-                    if time.time() - start_time > timeout:
-                        break
-                    
-                    data = self.q.get()
-                    if self.rec.AcceptWaveform(data):
-                        res = json.loads(self.rec.Result())
-                        if res['text']:
-                            result_text = res['text']
-                            break
-                    else:
-                        # Partial result (optional to look at)
-                        pass
-                        
-        except Exception as e:
-            print(f"Error during listening: {e}")
+            return None, None
             
-        print(f"Heard: {result_text}")
-        return result_text
+        if self.rec.AcceptWaveform(data):
+            # Complete utterance
+            res = json.loads(self.rec.Result())
+            return res.get('text', ''), ""
+        else:
+            # Partial utterance
+            res = json.loads(self.rec.PartialResult())
+            return None, res.get('partial', '')

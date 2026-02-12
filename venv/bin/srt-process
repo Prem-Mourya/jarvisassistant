@@ -1,4 +1,4 @@
-#!/Users/prem/Desktop/jarvisassistant/venv/bin/python3
+#!/Users/prem/jarvisassistant/venv/bin/python3
 
 """Process subtitle text content using arbitrary Python code."""
 
